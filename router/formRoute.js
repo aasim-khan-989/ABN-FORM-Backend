@@ -11,7 +11,7 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer storage for file uploads
+const allowedTypes = /jpeg|png|gif|jpg|pdf/;
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir); // Store files in the 'uploads' folder
@@ -21,22 +21,21 @@ const storage = multer.diskStorage({
   },
 });
 
-// Multer instance with file validation
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|png|gif|jpg/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
 
     if (extname && mimetype) {
       return cb(null, true);
     } else {
-      return cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and JPG are allowed.'));
+      return cb(new Error('Invalid file type. Only JPEG, PNG, JPG, GIF, and PDF are allowed.'));
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
 });
+
 
 // Helper function to convert file to Base64
 const convertToBase64 = (filePath) => {
@@ -90,28 +89,38 @@ router.get('/get-form-data', (req, res) => {
 
 
 // Define the route and attach file upload handling
-router.post('/submit-form', upload.fields([{ name: 'profilePic' }, { name: 'signature' }]), async (req, res) => {
-    try {
-      // Prepare form data
-      const formData = {
-        ...req.body,
-        profilePic: req.files?.profilePic ? await convertToBase64(req.files.profilePic[0].path) : null,
-        signature: req.files?.signature ? await convertToBase64(req.files.signature[0].path) : null,
-      };
-  
-      // Save form data
-      saveFormDataToFile(formData);
-  
-      // Clean up uploaded files
-      req.files?.profilePic && fs.unlinkSync(req.files.profilePic[0].path);
-      req.files?.signature && fs.unlinkSync(req.files.signature[0].path);
-  
-      res.status(200).send({ message: 'Form submitted successfully!', data: formData });
-    } catch (error) {
-      console.error('Error:', error);
-      res.status(500).send({ message: 'Error submitting form', error: error.message });
-    }
-  });
+router.post('/submit-form', upload.fields([
+  { name: 'profilePic' }, 
+  { name: 'signature' }, 
+  { name: 'document1' }, 
+  { name: 'document2' }
+]), async (req, res) => {
+  try {
+    const formData = {
+      ...req.body,
+      profilePic: req.files?.profilePic ? await convertToBase64(req.files.profilePic[0].path) : null,
+      signature: req.files?.signature ? await convertToBase64(req.files.signature[0].path) : null,
+      document1: req.files?.document1 ? await convertToBase64(req.files.document1[0].path) : null,
+      document2: req.files?.document2 ? await convertToBase64(req.files.document2[0].path) : null,
+    };
+
+    // Add null check for each file before conversion
+    saveFormDataToFile(formData);
+
+    // Clean up uploaded files with null checks
+    Object.values(req.files || {}).forEach(files => {
+      if (files && files[0]) {
+        fs.unlinkSync(files[0].path);
+      }
+    });
+
+    res.status(200).send({ message: 'Form submitted successfully!', data: formData });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send({ message: 'Error submitting form', error: error.message });
+  }
+});
+
 
     // Route to delete form data from local storage (data.json)
 router.delete('/delete-form-data', (req, res) => {

@@ -89,37 +89,49 @@ router.get('/get-form-data', (req, res) => {
 
 
 // Define the route and attach file upload handling
-router.post('/submit-form', upload.fields([
-  { name: 'profilePic' }, 
-  { name: 'signature' }, 
-  { name: 'document1' }, 
-  { name: 'document2' }
-]), async (req, res) => {
-  try {
-    const formData = {
-      ...req.body,
-      profilePic: req.files?.profilePic ? await convertToBase64(req.files.profilePic[0].path) : null,
-      signature: req.files?.signature ? await convertToBase64(req.files.signature[0].path) : null,
-      document1: req.files?.document1 ? await convertToBase64(req.files.document1[0].path) : null,
-      document2: req.files?.document2 ? await convertToBase64(req.files.document2[0].path) : null,
-    };
+router.post(
+  '/submit-form',
+  upload.fields([
+    { name: 'profilePic' },
+    { name: 'signature' },
+    { name: 'document1' },
+    { name: 'document2' },
+  ]),
+  async (req, res) => {
+    try {
+      // Prepare form data
+      const formData = {
+        ...req.body,
+        profilePic: req.files?.profilePic
+          ? await convertToBase64(req.files.profilePic[0].path)
+          : null,
+        signature: req.files?.signature
+          ? await convertToBase64(req.files.signature[0].path)
+          : null,
+        document1: req.files?.document1
+          ? await convertToBase64(req.files.document1[0].path)
+          : null,
+        document2: req.files?.document2
+          ? await convertToBase64(req.files.document2[0].path)
+          : null,
+      };
 
-    // Add null check for each file before conversion
-    saveFormDataToFile(formData);
+      // Save form data
+      saveFormDataToFile(formData);
 
-    // Clean up uploaded files with null checks
-    Object.values(req.files || {}).forEach(files => {
-      if (files && files[0]) {
-        fs.unlinkSync(files[0].path);
-      }
-    });
+      // Clean up uploaded files
+      req.files?.profilePic && fs.unlinkSync(req.files.profilePic[0].path);
+      req.files?.signature && fs.unlinkSync(req.files.signature[0].path);
+      req.files?.document1 && fs.unlinkSync(req.files.document1[0].path);
+      req.files?.document2 && fs.unlinkSync(req.files.document2[0].path);
 
-    res.status(200).send({ message: 'Form submitted successfully!', data: formData });
-  } catch (error) {
-    console.error('Error:', error);
-    res.status(500).send({ message: 'Error submitting form', error: error.message });
+      res.status(200).send({ message: 'Form submitted successfully!', data: formData });
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).send({ message: 'Error submitting form', error: error.message });
+    }
   }
-});
+);
 
 
     // Route to delete form data from local storage (data.json)

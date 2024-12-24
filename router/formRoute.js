@@ -68,6 +68,14 @@ const saveFormDataToFile = (data) => {
     console.error('Error writing to data.json:', error);
   }
 };
+router.get('/initialize', (req, res) => {
+  try {
+    res.status(200).send({ message: 'Server initialized successfully!' });
+  } catch (error) {
+    console.error('Error initializing server:', error);
+    res.status(500).send({ message: 'Error initializing server', error: error.message });
+  }
+});
 
 // Fetch the saved form data
 router.get('/get-form-data', (req, res) => {
@@ -90,9 +98,9 @@ router.get('/get-form-data', (req, res) => {
 
 // Define the route and attach file upload handling
 router.post('/submit-form', upload.fields([
-  { name: 'profilePic' }, 
-  { name: 'signature' }, 
-  { name: 'document1' }, 
+  { name: 'profilePic' },
+  { name: 'signature' },
+  { name: 'document1' },
   { name: 'document2' }
 ]), async (req, res) => {
   try {
@@ -122,7 +130,7 @@ router.post('/submit-form', upload.fields([
 });
 
 
-    // Route to delete form data from local storage (data.json)
+// Route to delete form data from local storage (data.json)
 router.delete('/delete-form-data', (req, res) => {
   const filePath = path.join(__dirname, 'data.json');
   try {
